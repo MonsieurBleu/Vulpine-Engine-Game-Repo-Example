@@ -10,6 +10,12 @@ default : install
 install :
 	$(MAKE) -C ./Engine game
 
+reinstall : 
+	$(MAKE) -C ./Engine gameReinstall
+
+clean : 
+	$(MAKE) -C ./Engine gameClean
+
 engine :
 	$(MAKE) -C ./Engine
 

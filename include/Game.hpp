@@ -4,6 +4,11 @@
 class Game final : public App
 {
     private : 
+
+        MeshMaterial depthOnlyMaterial;
+        MeshMaterial PBR;
+        MeshMaterial skyboxMaterial;
+
         
     public : 
         Game(GLFWwindow* window);

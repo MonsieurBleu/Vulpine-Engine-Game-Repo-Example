@@ -17,6 +17,27 @@ bool Game::userInput(GLFWKeyInfo input)
         case GLFW_KEY_ESCAPE:
             state = quit;
             break;
+
+        case GLFW_KEY_F2 :
+            globals.currentCamera->toggleMouseFollow();
+            break;
+        
+        case GLFW_KEY_1 : Bloom.toggle(); break;
+        case GLFW_KEY_2 : SSAO.toggle(); break;
+        
+        case GLFW_KEY_F5 :
+            #ifdef _WIN32
+            system("cls");
+            #else
+            system("clear");
+            #endif
+            finalProcessingStage.reset();
+            Bloom.getShader().reset();
+            SSAO.getShader().reset();
+            depthOnlyMaterial->reset();
+            PBR->reset();
+            skyboxMaterial->reset();
+            break;
         
         default:
             break;
@@ -38,6 +59,52 @@ void Game::mainloop()
 
     camera.init(radians(70.0f), globals.windowWidth(), globals.windowHeight(), 0.1f, 1E4f);
     camera.setMouseFollow(false);
+    camera.setPosition(vec3(0, 1, 0));
+    camera.setDirection(vec3(1, 0, 0));
+
+    /* Loading Materials */
+    depthOnlyMaterial = MeshMaterial(
+        new ShaderProgram(
+            "shader/depthOnly.frag",
+            "shader/foward/basic.vert",
+            "", 
+            globals.standartShaderUniform3D()
+        )
+    );
+
+    PBR = MeshMaterial(
+        new ShaderProgram(
+            "shader/foward/PBR.frag",
+            "shader/foward/basic.vert",
+            "", 
+            globals.standartShaderUniform3D()
+        )
+    );
+
+    skyboxMaterial = MeshMaterial(
+        new ShaderProgram(
+            "shader/foward/skybox.frag",
+            "shader/foward/basic.vert",
+            "", 
+            globals.standartShaderUniform3D()
+        )
+    );
+
+    /* Loading Models */
+    ModelRef skybox = newModel(skyboxMaterial);
+    skybox->loadFromFolder("ressources/models/skybox/", true, false);
+    skybox->invertFaces = true;
+    skybox->state.scaleScalar(1E3);
+
+    ModelRef ground = newModel(PBR);
+    ground->loadFromFolder("ressources/models/ground/");
+    ground->state.scaleScalar(10);
+
+    SceneDirectionalLight sun = newDirectionLight();
+    sun->setIntensity(0.75).setColor(vec3(1, 0.9, 0.85)).setDirection(vec3(-1, -1, 0.75));
+
+    scene.add(skybox).add(ground).add(sun);
+    scene.depthOnlyMaterial = depthOnlyMaterial;
 
     while(state != quit)
     {
@@ -72,18 +139,20 @@ void Game::mainloop()
         glDepthFunc(GL_EQUAL);
 
         /* 3D Render */
+        skybox->bindMap(0, 4);
         scene.draw();   
         renderBuffer.deactivate();
 
         /* Post Processing */
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         renderBuffer.bindTextures();
-        SSAO.render(camera);
-        Bloom.render(camera);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        SSAO.render(*globals.currentCamera);
+        Bloom.render(*globals.currentCamera);
 
         /* Final Screen Composition */
         glViewport(0, 0, globals.windowWidth(), globals.windowHeight());
         finalProcessingStage.activate();
+        screenBuffer2D.bindTexture(0, 7);
         globals.drawFullscreenQuad();
         finalProcessingStage.deactivate();
 
