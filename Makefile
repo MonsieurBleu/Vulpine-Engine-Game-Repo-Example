@@ -16,8 +16,11 @@ reinstall :
 clean : 
 	$(MAKE) -C ./Engine gameClean
 
-engine :
-	$(MAKE) -C ./Engine
+vulpine :
+	$(MAKE) -C ./Engine reinstall
+
+debug :
+	cd build && gdb $(G_EXEC)
 
 run : 
 	cd build && $(G_EXEC)
