@@ -2,7 +2,7 @@
 ifeq ($(OS),Windows_NT)
 	G_EXEC = Game.exe
 else
-	G_EXEC = Game.exe
+	G_EXEC = Game
 endif
 
 default : install

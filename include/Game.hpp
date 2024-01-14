@@ -4,20 +4,19 @@
 
 class Game final : public App
 {
-    private : 
+private:
+    MeshMaterial depthOnlyMaterial;
+    MeshMaterial PBR;
+    MeshMaterial skyboxMaterial;
+    MeshMaterial depthOnlyStencilMaterial;
+    MeshMaterial PBRstencil;
 
-        MeshMaterial depthOnlyMaterial;
-        MeshMaterial PBR;
-        MeshMaterial skyboxMaterial;
-        MeshMaterial depthOnlyStencilMaterial;
-        MeshMaterial PBRstencil;
+    std::shared_ptr<FPSController> playerControler;
+    PhysicsEngine physicsEngine;
 
-        std::shared_ptr<FPSController> playerControler;
-        PhysicsEngine physicsEngine;
-
-    public : 
-        Game(GLFWwindow* window);
-        void init(int paramSample);
-        bool userInput(GLFWKeyInfo input);
-        void mainloop();
+public:
+    Game(GLFWwindow *window);
+    void init(int paramSample);
+    bool userInput(GLFWKeyInfo input);
+    void mainloop();
 };
