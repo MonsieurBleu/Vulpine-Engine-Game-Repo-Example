@@ -1,12 +1,88 @@
 #include <Game.hpp>
 #include <../Engine/include/Globals.hpp>
 #include <GameObject.hpp>
+#include <CompilingOptions.hpp>
+
+#include <MathsUtils.hpp>
+ 
+
+void printm4(const mat4& m)
+{
+    for(int i = 0; i < 4; i++)
+    {
+    for(int j = 0; j < 4; j++)
+        std::cout << m[i][j] << "\t";
+    std::cout << "\n";
+    }
+};
+
+
 
 Game::Game(GLFWwindow* window) : App(window){}
 
 void Game::init(int paramSample)
 {
+    ambientLight = vec3(0.1);
+
+    finalProcessingStage = ShaderProgram(
+        "shader/post-process/final composing.frag", 
+        "shader/post-process/basic.vert", 
+        "", 
+        globals.standartShaderUniform2D());
     
+    finalProcessingStage.addUniform(ShaderUniform(Bloom.getIsEnableAddr(), 10));
+
+    camera.init(radians(70.0f), globals.windowWidth(), globals.windowHeight(), 0.1f, 1E4f);
+    camera.setMouseFollow(false);
+    camera.setPosition(vec3(0, 1, 0));
+    camera.setDirection(vec3(1, 0, 0));
+
+    /* Loading Materials */
+    depthOnlyMaterial = MeshMaterial(
+        new ShaderProgram(
+            "shader/depthOnly.frag",
+            "shader/foward/basic.vert",
+            ""
+        )
+    );
+
+    depthOnlyStencilMaterial = MeshMaterial(
+        new ShaderProgram(
+            "shader/depthOnlyStencil.frag",
+            "shader/foward/basic.vert",
+            ""
+        )
+    );
+
+    PBR = MeshMaterial(
+        new ShaderProgram(
+            "shader/foward/PBR.frag",
+            "shader/foward/basic.vert",
+            "", 
+            globals.standartShaderUniform3D()
+        )
+    );
+
+    PBRstencil = MeshMaterial(
+        new ShaderProgram(
+            "shader/foward/PBR.frag",
+            "shader/foward/basic.vert",
+            "", 
+            globals.standartShaderUniform3D()
+        )
+    );
+
+    skyboxMaterial = MeshMaterial(
+        new ShaderProgram(
+            "shader/foward/skybox.frag",
+            "shader/foward/basic.vert",
+            "", 
+            globals.standartShaderUniform3D()
+        )
+    );
+
+    PBRstencil.depthOnly = depthOnlyStencilMaterial;
+    scene.depthOnlyMaterial = depthOnlyMaterial;   
 }
 
 bool Game::userInput(GLFWKeyInfo input)
@@ -52,72 +128,14 @@ bool Game::userInput(GLFWKeyInfo input)
 
 void Game::mainloop()
 {
-    finalProcessingStage = ShaderProgram(
-        "shader/post-process/final composing.frag", 
-        "shader/post-process/basic.vert", 
-        "", 
-        globals.standartShaderUniform2D());
-    
-    finalProcessingStage.addUniform(ShaderUniform(Bloom.getIsEnableAddr(), 10));
-
-    camera.init(radians(70.0f), globals.windowWidth(), globals.windowHeight(), 0.1f, 1E4f);
-    camera.setMouseFollow(false);
-    camera.setPosition(vec3(0, 1, 0));
-    camera.setDirection(vec3(1, 0, 0));
-
-    /* Loading Materials */
-    depthOnlyMaterial = MeshMaterial(
-        new ShaderProgram(
-            "shader/depthOnly.frag",
-            "shader/foward/basic.vert",
-            "", 
-            globals.standartShaderUniform3D()
-        )
-    );
-
-    depthOnlyStencilMaterial = MeshMaterial(
-        new ShaderProgram(
-            "shader/depthOnlyStencil.frag",
-            "shader/foward/basic.vert",
-            "", 
-            globals.standartShaderUniform3D()
-        )
-    );
-
-    PBR = MeshMaterial(
-        new ShaderProgram(
-            "shader/foward/PBR.frag",
-            "shader/foward/basic.vert",
-            "", 
-            globals.standartShaderUniform3D()
-        )
-    );
-
-    PBRstencil = MeshMaterial(
-        new ShaderProgram(
-            "shader/foward/PBR.frag",
-            "shader/foward/basic.vert",
-            "", 
-            globals.standartShaderUniform3D()
-        )
-    );
-
-    PBRstencil.depthOnly = depthOnlyStencilMaterial;
-
-    skyboxMaterial = MeshMaterial(
-        new ShaderProgram(
-            "shader/foward/skybox.frag",
-            "shader/foward/basic.vert",
-            "", 
-            globals.standartShaderUniform3D()
-        )
-    );
-
-    /* Loading Models and setting up the scene*/
+    /* Loading Models and setting up the scene */
     ModelRef skybox = newModel(skyboxMaterial);
     skybox->loadFromFolder("ressources/models/skybox/", true, false);
-    skybox->invertFaces = true;
-    skybox->state.scaleScalar(1E3);
+    // skybox->invertFaces = true;
+    skybox->depthWrite = true;
+    skybox->state.frustumCulled = false;
+    skybox->state.scaleScalar(1E6);
+    scene.add(skybox);
 
     ModelRef floor = newModel(PBR);
     floor->loadFromFolder("ressources/models/ground/");
@@ -141,25 +159,39 @@ void Game::mainloop()
     ModelRef trunk = newModel(PBR);
     trunk->loadFromFolder("ressources/models/fantasy tree/trunk/");
 
-    ObjectGroupRef tree = newObjectGroup();
-    tree->add(leaves);
-    tree->add(trunk);
-    tree->state.scaleScalar(0.5);
+    // ObjectGroupRef tree = newObjectGroup();
+    // tree->add(leaves);
+    // tree->add(trunk);
+    // tree->state.scaleScalar(0.5);
+    // scene.add(tree);
 
-    scene.add(tree);
+
+    int forestSize = 8; 
+    float treeScale = 0.5;
+    for(int i = -forestSize; i < forestSize; i++)
+    for(int j = -forestSize; j < forestSize; j++)
+    {
+        ObjectGroupRef tree = newObjectGroup();
+        tree->add(trunk->copyWithSharedMesh());
+        tree->add(leaves->copyWithSharedMesh());
+        tree->state
+            .scaleScalar(treeScale)
+            .setPosition(vec3(i*forestSize*2, 0, j*forestSize*2));
+
+        scene.add(tree);
+    }
 
 
-    SceneDirectionalLight sun = newDirectionLight();
-    sun->setIntensity(1.f)
-        .setColor(vec3(1, 0.9, 0.85))
-        .setDirection(normalize(vec3(-1, -1, 0.75)));
+    SceneDirectionalLight sun = newDirectionLight(
+        DirectionLight()
+            .setColor(vec3(143, 107, 71)/vec3(255))
+            .setDirection(normalize(vec3(-0.454528, -0.707103, 0.541673)))
+            .setIntensity(1.0)
+            );
     sun->cameraResolution = vec2(2048);
     sun->shadowCameraSize = vec2(90, 90);
     sun->activateShadows();
-
-    scene.add(skybox);
     scene.add(sun);
-    scene.depthOnlyMaterial = depthOnlyMaterial;
 
     /* FPS demo initialization */
     RigidBody::gravity = vec3(0.0, -80, 0.0);
@@ -199,7 +231,9 @@ void Game::mainloop()
     FPSVariables::thingsYouCanStandOn.push_back(FloorBody);
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
-
+    glEnable(GL_DEPTH_TEST);
+    glLineWidth(3.0);
+    
     /* Main Loop */
     while(state != quit)
     {
@@ -224,11 +258,13 @@ void Game::mainloop()
         scene2D.updateAllObjects();
         screenBuffer2D.activate();
         scene2D.draw();
+        screenBuffer2D.deactivate();
 
         /* 3D Pre-Render */
         glDisable(GL_FRAMEBUFFER_SRGB);
         glDisable(GL_BLEND);
         glDepthFunc(GL_GREATER);
+        glEnable(GL_DEPTH_TEST);
 
         scene.updateAllObjects();
         scene.generateShadowMaps();
@@ -246,7 +282,6 @@ void Game::mainloop()
 
         /* Post Processing */
         renderBuffer.bindTextures();
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         SSAO.render(*globals.currentCamera);
         Bloom.render(*globals.currentCamera);
 
@@ -256,11 +291,11 @@ void Game::mainloop()
         sun->shadowMap.bindTexture(0, 6);
         screenBuffer2D.bindTexture(0, 7);
         globals.drawFullscreenQuad();
-        finalProcessingStage.deactivate();
+
+        sun->shadowCamera.setPosition(globals.currentCamera->getPosition());
+        // printm4(sun->shadowCamera.getProjectionViewMatrix());
 
         /* Main loop End */
         mainloopEndRoutine();
-
-        sun->shadowCamera.setPosition(camera.getPosition());
     }
 }

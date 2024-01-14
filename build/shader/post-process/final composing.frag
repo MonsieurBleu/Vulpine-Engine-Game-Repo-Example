@@ -20,7 +20,6 @@ in vec2 ViewRay;
 
 out vec4 _fragColor;
 
-#define SHOW_SHADOWMAP
 
 vec3 rgb2hsv(vec3 c)
 {
@@ -231,6 +230,8 @@ void main()
         // _fragColor.rgb = vec3(1.0 - pow(1.0 - depth, 50.0));
     ////////
 
+    
+// #define SHOW_SHADOWMAP
     #ifdef SHOW_SHADOWMAP
         vec2 SSMuv = uvScreen * vec2(iResolution) * 1/900.0;
         if(SSMuv.x >= 0.f && SSMuv.x <= 1.0 && SSMuv.y >= 0.f && SSMuv.y <= 1.0)
