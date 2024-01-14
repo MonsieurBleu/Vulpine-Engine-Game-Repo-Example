@@ -2,8 +2,9 @@
 #include <../Engine/include/Globals.hpp>
 #include <GameObject.hpp>
 #include <CompilingOptions.hpp>
-
 #include <MathsUtils.hpp>
+#include <Fonts.hpp>
+#include <FastUI.hpp>
  
 
 void printm4(const mat4& m)
@@ -82,11 +83,17 @@ void Game::init(int paramSample)
     );
 
     PBRstencil.depthOnly = depthOnlyStencilMaterial;
-    scene.depthOnlyMaterial = depthOnlyMaterial;   
+    scene.depthOnlyMaterial = depthOnlyMaterial;  
+
+    globals.fpsLimiter.activate();
+    globals.fpsLimiter.freq = 144.f; 
+    glfwSwapInterval(0);
 }
 
 bool Game::userInput(GLFWKeyInfo input)
 {
+    if(baseInput(input)) return true;
+
     playerControler->doInputs(input);
 
     if(input.action == GLFW_PRESS)
@@ -140,8 +147,8 @@ void Game::mainloop()
     ModelRef floor = newModel(PBR);
     floor->loadFromFolder("ressources/models/ground/");
     
-    int gridSize = 8; 
-    int gridScale = 5;
+    int gridSize = 6; 
+    int gridScale = 10;
     for(int i = -gridSize; i < gridSize; i++)
     for(int j = -gridSize; j < gridSize; j++)
     {
@@ -166,17 +173,19 @@ void Game::mainloop()
     // scene.add(tree);
 
 
-    int forestSize = 8; 
+    int forestSize = 6; 
     float treeScale = 0.5;
     for(int i = -forestSize; i < forestSize; i++)
     for(int j = -forestSize; j < forestSize; j++)
     {
         ObjectGroupRef tree = newObjectGroup();
         tree->add(trunk->copyWithSharedMesh());
-        tree->add(leaves->copyWithSharedMesh());
+        ModelRef l = leaves->copyWithSharedMesh();
+        l->noBackFaceCulling = true;
+        tree->add(l);
         tree->state
             .scaleScalar(treeScale)
-            .setPosition(vec3(i*forestSize*2, 0, j*forestSize*2));
+            .setPosition(vec3(i*treeScale*40, 0, j*treeScale*40));
 
         scene.add(tree);
     }
@@ -186,7 +195,7 @@ void Game::mainloop()
         DirectionLight()
             .setColor(vec3(143, 107, 71)/vec3(255))
             .setDirection(normalize(vec3(-0.454528, -0.707103, 0.541673)))
-            .setIntensity(1.0)
+            .setIntensity(20.0)
             );
     sun->cameraResolution = vec2(2048);
     sun->shadowCameraSize = vec2(90, 90);
@@ -233,7 +242,46 @@ void Game::mainloop()
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
     glEnable(GL_DEPTH_TEST);
     glLineWidth(3.0);
+
+
+    /* Setting up the UI */
+    FontRef font(new FontUFT8);
+    font->readCSV("ressources/fonts/Roboto/out.csv");
+    font->setAtlas(Texture2D().loadFromFileKTX("ressources/fonts/Roboto/out.ktx"));
+    MeshMaterial defaultFontMaterial(
+    new ShaderProgram(
+        "shader/2D/sprite.frag",
+        "shader/2D/sprite.vert",
+        "",
+        globals.standartShaderUniform2D()
+    ));
+
+    MeshMaterial defaultSUIMaterial(
+        new ShaderProgram(
+            "shader/2D/fastui.frag",
+            "shader/2D/fastui.vert",
+            "",
+            globals.standartShaderUniform2D()
+        ));
     
+    SimpleUiTileBatchRef uiBatch(new SimpleUiTileBatch);
+    uiBatch->setMaterial(defaultSUIMaterial);
+    uiBatch->state.position.z = 0.0;
+    uiBatch->state.forceUpdate();
+
+    FastUI_context ui(uiBatch, font, scene2D, defaultFontMaterial);
+    FastUI_valueMenu menu(ui, {});
+
+    menu->state.setPosition(vec3(-0.9, 0.5, 0)).scaleScalar(0.95);
+    globals.appTime.setMenuConst(menu);
+    globals.cpuTime.setMenu(menu);
+    globals.gpuTime.setMenu(menu);
+    globals.fpsLimiter.setMenu(menu);
+
+    menu.batch();
+    scene2D.updateAllObjects();
+    uiBatch->batch();
+
     /* Main Loop */
     while(state != quit)
     {
@@ -249,6 +297,9 @@ void Game::mainloop()
             FloorGameObject.update(delta);
         }
 
+        menu.trackCursor();
+        menu.updateText();
+
         mainloopPreRenderRoutine();
 
         /* UI & 2D Render */
@@ -256,7 +307,9 @@ void Game::mainloop()
         glEnable(GL_FRAMEBUFFER_SRGB);
 
         scene2D.updateAllObjects();
+        uiBatch->batch();
         screenBuffer2D.activate();
+        uiBatch->draw();
         scene2D.draw();
         screenBuffer2D.deactivate();
 
