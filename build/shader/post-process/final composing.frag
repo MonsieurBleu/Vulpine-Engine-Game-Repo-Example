@@ -202,21 +202,19 @@ void main()
     // _fragColor.rgb += texture(bNormal, uvScreen).rgb;
     // _fragColor.rgb = 1.0 - texture(bAO, uvScreen).rgb;
 
+
+
+
+    float exposure = 2.0;
+    float gamma = 2.2;
+
     vec3 bloom = texture(bEmmisive, uv).rgb; 
     if(bloomEnable != 0) 
         // _fragColor.rgb += 0.125*texture(bEmmisive, uv).rgb; 
         // _fragColor.rgb += 0.25*bloom; 
-        _fragColor.rgb += 0.125*pow(bloom, vec3(1.5)); 
+        // _fragColor.rgb += exposure*0.25*pow(bloom, vec3(1.5)); 
+        _fragColor.rgb += exposure*0.25*pow(bloom, vec3(2 - 1/exposure));
 
-    
-    // float exposure = 1.0;
-    // float gamma = 1.75;
-
-    // float exposure = 1.0;
-    // float gamma = 2.75;
-
-    float exposure = 1.0;
-    float gamma = 2.2;
 
     // exposure tone mapping
     vec3 mapped = vec3(1.0) - exp(-_fragColor.rgb * exposure);
@@ -237,7 +235,7 @@ void main()
         if(SSMuv.x >= 0.f && SSMuv.x <= 1.0 && SSMuv.y >= 0.f && SSMuv.y <= 1.0)
         {
             float d = texture(bSunMap, SSMuv).r;
-            d = pow(d, 100.0)*5000000000.0;
+            d = pow(d, 125.0)*400000000000.0;
             _fragColor.rgb = vec3(d);
             // _fragColor.rgb = texture(bSunMap, SSMuv).rgb;
         }

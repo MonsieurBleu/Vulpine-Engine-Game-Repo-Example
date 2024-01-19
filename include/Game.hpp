@@ -1,18 +1,32 @@
 #pragma once
 #include <../Engine/include/App.hpp>
 #include <demos/FPS/FPSController.hpp>
+#include <Fonts.hpp>
+#include <FastUI.hpp>
 
 class Game final : public App
 {
 private:
-    MeshMaterial depthOnlyMaterial;
+    /* 3D Materials */
     MeshMaterial PBR;
-    MeshMaterial skyboxMaterial;
-    MeshMaterial depthOnlyStencilMaterial;
     MeshMaterial PBRstencil;
+    MeshMaterial PBRinstanced;
+    MeshMaterial skyboxMaterial;
+    MeshMaterial depthOnlyMaterial;
+    MeshMaterial depthOnlyStencilMaterial;
+    MeshMaterial depthOnlyInstancedMaterial;
 
+    /* Fast-UI */
+    FontRef FUIfont;    
+    MeshMaterial defaultFontMaterial;
+    MeshMaterial defaultSUIMaterial;
+    SimpleUiTileBatchRef fuiBatch;
+
+    /* Physics */
     std::shared_ptr<FPSController> playerControler;
     PhysicsEngine physicsEngine;
+    LimitTimer physicsTicks;
+    void physicsLoop();
 
 public:
     Game(GLFWwindow *window);

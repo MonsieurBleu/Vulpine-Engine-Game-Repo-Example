@@ -18,9 +18,6 @@ layout (binding = 1) uniform sampler2D bMaterial;
 #include functions/Reflections.glsl
 #include functions/NormalMap.glsl
 
-in vec3 viewPos;
-in vec3 viewVector;
-
 void main()
 {
     vec4 CE = texture(bColor, uv);
@@ -35,6 +32,8 @@ void main()
     color = CE.rgb;
     normalComposed = perturbNormal(normal, viewVector, NRM.xy, uv);
     viewDir = normalize(_cameraPosition - position);
+
+    normalComposed = gl_FrontFacing ? normalComposed : -normalComposed;
     
     Material material = getMultiLightPBR();
     vec3 rColor = getSkyboxReflection(viewDir, normalComposed);

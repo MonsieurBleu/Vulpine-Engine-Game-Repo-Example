@@ -62,36 +62,55 @@ float getShadow(sampler2D shadowmap, mat4 rMatrix)
     mapPosition.xyz /= mapPosition.w;
     mapPosition.xy = mapPosition.xy*0.5 + 0.5;    
 
+    if(mapPosition.x < 0.f || mapPosition.x > 1.f || 
+       mapPosition.y < 0.f || mapPosition.y > 1.f)
+       return 1.f;
+
     float res = 0.f;
-    float bias = 0.00002;
-    float radius = 0.0015;
+    float bias = 0.00005; //0.00002
+    float radius = 0.001; // 0.0015
 
     #ifdef EFFICIENT_SMOOTH_SHADOW
         int it = 8;
-        int itPenumbra = it + 32;
+        int itPenumbra = 64;
         int i = 0;
 
         for(; i < it; i++)
-            res += texture(
-                shadowmap, 
-                mapPosition.xy + 2.0*radius*vec2(gold_noise3(position, i), 
-                gold_noise3(position, i*0.2))).r 
-            - bias < mapPosition.z ? 1.0 : 0.0;
-
-        if(res < float(it) && res > 0.f)
         {
-            float p = float(it)*0.5;
-            float prct = 0.5 + 0.5*abs(res-p)/p;
-            itPenumbra = int(float(itPenumbra)*prct);
+            vec2 rand = vec2(gold_noise3(position, i), gold_noise3(position, -i));
+            // vec2 rand = 0.5 - random2(position+i);
+            vec2 samplePos = mapPosition.xy + 2.0*radius*rand;
+            float d = texture(shadowmap, samplePos).r;
+            res += d - bias < mapPosition.z ? 1.0 : 0.0;
+        }
+
+        float p = float(it)*0.5;
+        float prct = abs(res-p)/p;
+        // itPenumbra = int(float(itPenumbra)*prct);
+
+        // if(res < float(it)-0.01 && res > 0.001)
+        if(prct < 1.f)
+        {
+            // float p = float(it)*0.5;
+            // float prct = 0.5 + 0.5*abs(res-p)/p;
+            // itPenumbra = int(float(itPenumbra)*prct);
 
             for(; i < itPenumbra; i++)
-                res += texture(
-                    shadowmap, 
-                    mapPosition.xy + radius*vec2(gold_noise3(position, i), 
-                    gold_noise3(position, i*0.2))).r 
-                - bias < mapPosition.z ? 1.0 : 0.0;
+            {
+                vec2 rand = vec2(gold_noise3(position, i), gold_noise3(position, -i));
+                // vec2 rand = 0.5 - random2(position+i);
+                vec2 samplePos = mapPosition.xy + radius*rand;
+                float d = texture(shadowmap, samplePos).r;
+                res += d - bias < mapPosition.z ? 1.0 : 0.0;
+            }
+
+            // res = 0.f;
         }
-        
+        // else
+        //     res = 1.f;
+
+        // res = prct;
+
         res /= float(i+1);
     #else
         res = texture(shadowmap, mapPosition.xy).r - bias < mapPosition.z ? 1.0 : 0.0;
@@ -181,7 +200,11 @@ Material getMultiLightPBR()
 
 vec3 getStandardEmmisive(vec3 fcolor)
 {
-    vec3 baseEmmissive = fcolor*(rgb2v(fcolor) - ambientLight*0.5);
-    vec3 finalEmmisive = mix(baseEmmissive, 5.0*fcolor, mEmmisive);
+    // vec3 baseEmmissive = fcolor*(rgb2v(fcolor) - ambientLight*0.5);
+    // vec3 finalEmmisive = mix(baseEmmissive, 2.0*fcolor, mEmmisive);
+
+    vec3 baseEmmissive = fcolor;
+    vec3 finalEmmisive = baseEmmissive * (1.0 + 2.0*mEmmisive);
+
     return finalEmmisive;
 }

@@ -3,26 +3,16 @@
 #include <GameObject.hpp>
 #include <CompilingOptions.hpp>
 #include <MathsUtils.hpp>
-#include <Fonts.hpp>
-#include <FastUI.hpp>
- 
-
-void printm4(const mat4& m)
-{
-    for(int i = 0; i < 4; i++)
-    {
-    for(int j = 0; j < 4; j++)
-        std::cout << m[i][j] << "\t";
-    std::cout << "\n";
-    }
-};
 
 
+#include <thread>
 
 Game::Game(GLFWwindow* window) : App(window){}
 
 void Game::init(int paramSample)
 {
+    setIcon("ressources/icon.png");
+
     ambientLight = vec3(0.1);
 
     finalProcessingStage = ShaderProgram(
@@ -38,7 +28,7 @@ void Game::init(int paramSample)
     camera.setPosition(vec3(0, 1, 0));
     camera.setDirection(vec3(1, 0, 0));
 
-    /* Loading Materials */
+    /* Loading 3D Materials */
     depthOnlyMaterial = MeshMaterial(
         new ShaderProgram(
             "shader/depthOnly.frag",
@@ -51,6 +41,14 @@ void Game::init(int paramSample)
         new ShaderProgram(
             "shader/depthOnlyStencil.frag",
             "shader/foward/basic.vert",
+            ""
+        )
+    );
+
+    depthOnlyInstancedMaterial = MeshMaterial(
+        new ShaderProgram(
+            "shader/depthOnlyStencil.frag",
+            "shader/foward/basicInstance.vert",
             ""
         )
     );
@@ -73,6 +71,15 @@ void Game::init(int paramSample)
         )
     );
 
+    PBRinstanced = MeshMaterial(
+        new ShaderProgram(
+            "shader/foward/PBR.frag",
+            "shader/foward/basicInstance.vert",
+            "", 
+            globals.standartShaderUniform3D()
+        )
+    );
+
     skyboxMaterial = MeshMaterial(
         new ShaderProgram(
             "shader/foward/skybox.frag",
@@ -83,8 +90,35 @@ void Game::init(int paramSample)
     );
 
     PBRstencil.depthOnly = depthOnlyStencilMaterial;
+    PBRinstanced.depthOnly = depthOnlyInstancedMaterial;
     scene.depthOnlyMaterial = depthOnlyMaterial;  
 
+    /* UI */
+    FUIfont = FontRef(new FontUFT8);
+    FUIfont->readCSV("ressources/fonts/Roboto/out.csv");
+    FUIfont->setAtlas(Texture2D().loadFromFileKTX("ressources/fonts/Roboto/out.ktx"));
+    defaultFontMaterial = MeshMaterial(
+    new ShaderProgram(
+        "shader/2D/sprite.frag",
+        "shader/2D/sprite.vert",
+        "",
+        globals.standartShaderUniform2D()
+    ));
+
+    defaultSUIMaterial = MeshMaterial(
+        new ShaderProgram(
+            "shader/2D/fastui.frag",
+            "shader/2D/fastui.vert",
+            "",
+            globals.standartShaderUniform2D()
+        ));
+    
+    fuiBatch = SimpleUiTileBatchRef(new SimpleUiTileBatch);
+    fuiBatch->setMaterial(defaultSUIMaterial);
+    fuiBatch->state.position.z = 0.0;
+    fuiBatch->state.forceUpdate();
+
+    /* VSYNC and fps limit */
     globals.fpsLimiter.activate();
     globals.fpsLimiter.freq = 144.f; 
     glfwSwapInterval(0);
@@ -122,6 +156,7 @@ bool Game::userInput(GLFWKeyInfo input)
             SSAO.getShader().reset();
             depthOnlyMaterial->reset();
             PBR->reset();
+            PBRstencil->reset();
             skyboxMaterial->reset();
             break;
         
@@ -132,6 +167,23 @@ bool Game::userInput(GLFWKeyInfo input)
 
     return true;
 };
+
+void Game::physicsLoop()
+{
+    physicsTicks.freq = 45.f;
+    physicsTicks.activate();
+
+    while(state != quit)
+    {
+        physicsTicks.start();
+
+        physicsMutex.lock();
+        physicsEngine.update(1.f/physicsTicks.freq);
+        physicsMutex.unlock();
+
+        physicsTicks.waitForEnd();
+    }
+}
 
 void Game::mainloop()
 {
@@ -147,7 +199,7 @@ void Game::mainloop()
     ModelRef floor = newModel(PBR);
     floor->loadFromFolder("ressources/models/ground/");
     
-    int gridSize = 6; 
+    int gridSize = 10; 
     int gridScale = 10;
     for(int i = -gridSize; i < gridSize; i++)
     for(int j = -gridSize; j < gridSize; j++)
@@ -159,6 +211,10 @@ void Game::mainloop()
         scene.add(f);
     }
 
+
+    int forestSize = 8; 
+    float treeScale = 0.5;
+
     ModelRef leaves = newModel(PBRstencil);
     leaves->loadFromFolder("ressources/models/fantasy tree/");
     leaves->noBackFaceCulling = true;
@@ -166,15 +222,6 @@ void Game::mainloop()
     ModelRef trunk = newModel(PBR);
     trunk->loadFromFolder("ressources/models/fantasy tree/trunk/");
 
-    // ObjectGroupRef tree = newObjectGroup();
-    // tree->add(leaves);
-    // tree->add(trunk);
-    // tree->state.scaleScalar(0.5);
-    // scene.add(tree);
-
-
-    int forestSize = 6; 
-    float treeScale = 0.5;
     for(int i = -forestSize; i < forestSize; i++)
     for(int j = -forestSize; j < forestSize; j++)
     {
@@ -190,12 +237,29 @@ void Game::mainloop()
         scene.add(tree);
     }
 
+    // InstancedModelRef trunk = newInstancedModel();
+    // trunk->setMaterial(PBRinstanced);
+    // trunk->loadFromFolder("ressources/models/fantasy tree/trunk/");
+    // trunk->allocate(2E4);
+
+    // for(int i = -forestSize; i < forestSize; i++)
+    // for(int j = -forestSize; j < forestSize; j++)
+    // {
+    //     ModelInstance &inst = *trunk->createInstance();
+    //     inst.scaleScalar(treeScale)
+    //         .setPosition(vec3(i*treeScale*40, 0, j*treeScale*40));
+    //     inst.update();
+    // }
+    // trunk->updateInstances();
+    // scene.add(trunk);
+
+
 
     SceneDirectionalLight sun = newDirectionLight(
         DirectionLight()
             .setColor(vec3(143, 107, 71)/vec3(255))
             .setDirection(normalize(vec3(-0.454528, -0.707103, 0.541673)))
-            .setIntensity(20.0)
+            .setIntensity(5.0)
             );
     sun->cameraResolution = vec2(2048);
     sun->shadowCameraSize = vec2(90, 90);
@@ -245,54 +309,36 @@ void Game::mainloop()
 
 
     /* Setting up the UI */
-    FontRef font(new FontUFT8);
-    font->readCSV("ressources/fonts/Roboto/out.csv");
-    font->setAtlas(Texture2D().loadFromFileKTX("ressources/fonts/Roboto/out.ktx"));
-    MeshMaterial defaultFontMaterial(
-    new ShaderProgram(
-        "shader/2D/sprite.frag",
-        "shader/2D/sprite.vert",
-        "",
-        globals.standartShaderUniform2D()
-    ));
-
-    MeshMaterial defaultSUIMaterial(
-        new ShaderProgram(
-            "shader/2D/fastui.frag",
-            "shader/2D/fastui.vert",
-            "",
-            globals.standartShaderUniform2D()
-        ));
-    
-    SimpleUiTileBatchRef uiBatch(new SimpleUiTileBatch);
-    uiBatch->setMaterial(defaultSUIMaterial);
-    uiBatch->state.position.z = 0.0;
-    uiBatch->state.forceUpdate();
-
-    FastUI_context ui(uiBatch, font, scene2D, defaultFontMaterial);
+    FastUI_context ui(fuiBatch, FUIfont, scene2D, defaultFontMaterial);
     FastUI_valueMenu menu(ui, {});
 
-    menu->state.setPosition(vec3(-0.9, 0.5, 0)).scaleScalar(0.95);
+    menu->state.setPosition(vec3(-0.9, 0.5, 0)).scaleScalar(0.8);
     globals.appTime.setMenuConst(menu);
     globals.cpuTime.setMenu(menu);
     globals.gpuTime.setMenu(menu);
     globals.fpsLimiter.setMenu(menu);
+    physicsTicks.setMenu(menu);
+    sun->setMenu(menu, U"Sun");
 
     menu.batch();
     scene2D.updateAllObjects();
-    uiBatch->batch();
+    fuiBatch->batch();
+
+    state = AppState::run;
+    std::thread physicsThreads(Game::physicsLoop, this);
 
     /* Main Loop */
-    while(state != quit)
+    while(state != AppState::quit)
     {
         mainloopStartRoutine();
 
         for(GLFWKeyInfo input; inputs.pull(input); userInput(input));
 
+        
         float delta = min(globals.simulationTime.getDelta(), 0.05f);
         if(globals.windowHasFocus() && delta > 0.00001f)
         {
-            physicsEngine.update(delta);
+            // physicsEngine.update(delta);
             playerControler->update(delta);
             FloorGameObject.update(delta);
         }
@@ -307,9 +353,10 @@ void Game::mainloop()
         glEnable(GL_FRAMEBUFFER_SRGB);
 
         scene2D.updateAllObjects();
-        uiBatch->batch();
+        fuiBatch->batch();
         screenBuffer2D.activate();
-        uiBatch->draw();
+        fuiBatch->draw();
+        scene2D.cull();
         scene2D.draw();
         screenBuffer2D.deactivate();
 
@@ -321,9 +368,11 @@ void Game::mainloop()
 
         scene.updateAllObjects();
         scene.generateShadowMaps();
+        renderBuffer.activate();
+
+        scene.cull();
 
         /* 3D Early Depth Testing */
-        renderBuffer.activate();
         scene.depthOnlyDraw(*globals.currentCamera, true);
         glDepthFunc(GL_EQUAL);
 
@@ -345,10 +394,11 @@ void Game::mainloop()
         screenBuffer2D.bindTexture(0, 7);
         globals.drawFullscreenQuad();
 
-        sun->shadowCamera.setPosition(globals.currentCamera->getPosition());
-        // printm4(sun->shadowCamera.getProjectionViewMatrix());
+        // sun->shadowCamera.setPosition(globals.currentCamera->getPosition());
 
         /* Main loop End */
         mainloopEndRoutine();
     }
+
+    physicsThreads.join();
 }

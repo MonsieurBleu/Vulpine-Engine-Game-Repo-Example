@@ -5,4 +5,4 @@
 #endif
 in vec3 normal;
 in vec3 position;
-in vec3 viewNormal;
+in vec3 viewVector;

@@ -14,9 +14,6 @@ layout (binding = 1) uniform sampler2D bMaterial;
 
 #include functions/standardMaterial.glsl
 
-in vec3 viewPos;
-in vec3 viewVector;
-
 void main()
 {
 }
