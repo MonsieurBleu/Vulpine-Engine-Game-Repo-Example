@@ -3,7 +3,7 @@
 #include <GameObject.hpp>
 #include <CompilingOptions.hpp>
 #include <MathsUtils.hpp>
-
+#include <Audio.hpp>
 
 #include <thread>
 
@@ -326,6 +326,15 @@ void Game::mainloop()
 
     state = AppState::run;
     std::thread physicsThreads(Game::physicsLoop, this);
+
+    /* Music ! */
+    // AudioFile music1;
+    // music1.loadOGG("ressources/musics/Endless Space by GeorgeTantchev.ogg");
+
+    // AudioSource musicSource;
+    // musicSource
+    //     .setBuffer(music1.getHandle())
+    //     .play();
 
     /* Main Loop */
     while(state != AppState::quit)
