@@ -7,7 +7,7 @@
 
 #include <thread>
 
-Game::Game(GLFWwindow* window) : App(window){}
+Game::Game(GLFWwindow *window) : App(window) {}
 
 void Game::init(int paramSample)
 {
@@ -16,11 +16,11 @@ void Game::init(int paramSample)
     ambientLight = vec3(0.1);
 
     finalProcessingStage = ShaderProgram(
-        "shader/post-process/final composing.frag", 
-        "shader/post-process/basic.vert", 
-        "", 
+        "shader/post-process/final composing.frag",
+        "shader/post-process/basic.vert",
+        "",
         globals.standartShaderUniform2D());
-    
+
     finalProcessingStage.addUniform(ShaderUniform(Bloom.getIsEnableAddr(), 10));
 
     camera.init(radians(70.0f), globals.windowWidth(), globals.windowHeight(), 0.1f, 1E4f);
@@ -33,86 +33,70 @@ void Game::init(int paramSample)
         new ShaderProgram(
             "shader/depthOnly.frag",
             "shader/foward/basic.vert",
-            ""
-        )
-    );
+            ""));
 
     depthOnlyStencilMaterial = MeshMaterial(
         new ShaderProgram(
             "shader/depthOnlyStencil.frag",
             "shader/foward/basic.vert",
-            ""
-        )
-    );
+            ""));
 
     depthOnlyInstancedMaterial = MeshMaterial(
         new ShaderProgram(
             "shader/depthOnlyStencil.frag",
             "shader/foward/basicInstance.vert",
-            ""
-        )
-    );
+            ""));
 
     PBR = MeshMaterial(
         new ShaderProgram(
             "shader/foward/PBR.frag",
             "shader/foward/basic.vert",
-            "", 
-            globals.standartShaderUniform3D()
-        )
-    );
+            "",
+            globals.standartShaderUniform3D()));
 
     PBRstencil = MeshMaterial(
         new ShaderProgram(
             "shader/foward/PBR.frag",
             "shader/foward/basic.vert",
-            "", 
-            globals.standartShaderUniform3D()
-        )
-    );
+            "",
+            globals.standartShaderUniform3D()));
 
     PBRinstanced = MeshMaterial(
         new ShaderProgram(
             "shader/foward/PBR.frag",
             "shader/foward/basicInstance.vert",
-            "", 
-            globals.standartShaderUniform3D()
-        )
-    );
+            "",
+            globals.standartShaderUniform3D()));
 
     skyboxMaterial = MeshMaterial(
         new ShaderProgram(
             "shader/foward/skybox.frag",
             "shader/foward/basic.vert",
-            "", 
-            globals.standartShaderUniform3D()
-        )
-    );
+            "",
+            globals.standartShaderUniform3D()));
 
     PBRstencil.depthOnly = depthOnlyStencilMaterial;
     PBRinstanced.depthOnly = depthOnlyInstancedMaterial;
-    scene.depthOnlyMaterial = depthOnlyMaterial;  
+    scene.depthOnlyMaterial = depthOnlyMaterial;
 
     /* UI */
     FUIfont = FontRef(new FontUFT8);
     FUIfont->readCSV("ressources/fonts/Roboto/out.csv");
     FUIfont->setAtlas(Texture2D().loadFromFileKTX("ressources/fonts/Roboto/out.ktx"));
     defaultFontMaterial = MeshMaterial(
-    new ShaderProgram(
-        "shader/2D/sprite.frag",
-        "shader/2D/sprite.vert",
-        "",
-        globals.standartShaderUniform2D()
-    ));
+        new ShaderProgram(
+            "shader/2D/sprite.frag",
+            "shader/2D/sprite.vert",
+            "",
+            globals.standartShaderUniform2D()));
 
     defaultSUIMaterial = MeshMaterial(
         new ShaderProgram(
             "shader/2D/fastui.frag",
             "shader/2D/fastui.vert",
             "",
-            globals.standartShaderUniform2D()
-        ));
-    
+            globals.standartShaderUniform2D()));
+
     fuiBatch = SimpleUiTileBatchRef(new SimpleUiTileBatch);
     fuiBatch->setMaterial(defaultSUIMaterial);
     fuiBatch->state.position.z = 0.0;
@@ -120,17 +104,18 @@ void Game::init(int paramSample)
 
     /* VSYNC and fps limit */
     globals.fpsLimiter.activate();
-    globals.fpsLimiter.freq = 144.f; 
+    globals.fpsLimiter.freq = 144.f;
     glfwSwapInterval(0);
 }
 
 bool Game::userInput(GLFWKeyInfo input)
 {
-    if(baseInput(input)) return true;
+    if (baseInput(input))
+        return true;
 
     playerControler->doInputs(input);
 
-    if(input.action == GLFW_PRESS)
+    if (input.action == GLFW_PRESS)
     {
         switch (input.key)
         {
@@ -138,19 +123,23 @@ bool Game::userInput(GLFWKeyInfo input)
             state = quit;
             break;
 
-        case GLFW_KEY_F2 :
+        case GLFW_KEY_F2:
             globals.currentCamera->toggleMouseFollow();
             break;
-        
-        case GLFW_KEY_1 : Bloom.toggle(); break;
-        case GLFW_KEY_2 : SSAO.toggle(); break;
-        
-        case GLFW_KEY_F5 :
-            #ifdef _WIN32
+
+        case GLFW_KEY_1:
+            Bloom.toggle();
+            break;
+        case GLFW_KEY_2:
+            SSAO.toggle();
+            break;
+
+        case GLFW_KEY_F5:
+#ifdef _WIN32
             system("cls");
-            #else
+#else
             system("clear");
-            #endif
+#endif
             finalProcessingStage.reset();
             Bloom.getShader().reset();
             SSAO.getShader().reset();
@@ -159,7 +148,7 @@ bool Game::userInput(GLFWKeyInfo input)
             PBRstencil->reset();
             skyboxMaterial->reset();
             break;
-        
+
         default:
             break;
         }
@@ -173,12 +162,12 @@ void Game::physicsLoop()
     physicsTicks.freq = 45.f;
     physicsTicks.activate();
 
-    while(state != quit)
+    while (state != quit)
     {
         physicsTicks.start();
 
         physicsMutex.lock();
-        physicsEngine.update(1.f/physicsTicks.freq);
+        physicsEngine.update(1.f / physicsTicks.freq);
         physicsMutex.unlock();
 
         physicsTicks.waitForEnd();
@@ -198,44 +187,43 @@ void Game::mainloop()
 
     ModelRef floor = newModel(PBR);
     floor->loadFromFolder("ressources/models/ground/");
-    
-    int gridSize = 10; 
+
+    int gridSize = 10;
     int gridScale = 10;
-    for(int i = -gridSize; i < gridSize; i++)
-    for(int j = -gridSize; j < gridSize; j++)
-    {
-        ModelRef f = floor->copyWithSharedMesh();
-        f->state
-            .scaleScalar(gridScale)
-            .setPosition(vec3(i*gridScale*1.80, 0, j*gridScale*1.80));
-        scene.add(f);
-    }
+    for (int i = -gridSize; i < gridSize; i++)
+        for (int j = -gridSize; j < gridSize; j++)
+        {
+            ModelRef f = floor->copyWithSharedMesh();
+            f->state
+                .scaleScalar(gridScale)
+                .setPosition(vec3(i * gridScale * 1.80, 0, j * gridScale * 1.80));
+            scene.add(f);
+        }
 
-
-    int forestSize = 8; 
+    int forestSize = 8;
     float treeScale = 0.5;
 
     ModelRef leaves = newModel(PBRstencil);
     leaves->loadFromFolder("ressources/models/fantasy tree/");
     leaves->noBackFaceCulling = true;
-    
+
     ModelRef trunk = newModel(PBR);
     trunk->loadFromFolder("ressources/models/fantasy tree/trunk/");
 
-    for(int i = -forestSize; i < forestSize; i++)
-    for(int j = -forestSize; j < forestSize; j++)
-    {
-        ObjectGroupRef tree = newObjectGroup();
-        tree->add(trunk->copyWithSharedMesh());
-        ModelRef l = leaves->copyWithSharedMesh();
-        l->noBackFaceCulling = true;
-        tree->add(l);
-        tree->state
-            .scaleScalar(treeScale)
-            .setPosition(vec3(i*treeScale*40, 0, j*treeScale*40));
+    for (int i = -forestSize; i < forestSize; i++)
+        for (int j = -forestSize; j < forestSize; j++)
+        {
+            ObjectGroupRef tree = newObjectGroup();
+            tree->add(trunk->copyWithSharedMesh());
+            ModelRef l = leaves->copyWithSharedMesh();
+            l->noBackFaceCulling = true;
+            tree->add(l);
+            tree->state
+                .scaleScalar(treeScale)
+                .setPosition(vec3(i * treeScale * 40, 0, j * treeScale * 40));
 
-        scene.add(tree);
-    }
+            scene.add(tree);
+        }
 
     // InstancedModelRef trunk = newInstancedModel();
     // trunk->setMaterial(PBRinstanced);
@@ -253,14 +241,11 @@ void Game::mainloop()
     // trunk->updateInstances();
     // scene.add(trunk);
 
-
-
     SceneDirectionalLight sun = newDirectionLight(
         DirectionLight()
-            .setColor(vec3(143, 107, 71)/vec3(255))
+            .setColor(vec3(143, 107, 71) / vec3(255))
             .setDirection(normalize(vec3(-0.454528, -0.707103, 0.541673)))
-            .setIntensity(5.0)
-            );
+            .setIntensity(5.0));
     sun->cameraResolution = vec2(2048);
     sun->shadowCameraSize = vec2(90, 90);
     sun->activateShadows();
@@ -280,7 +265,7 @@ void Game::mainloop()
         PhysicsMaterial(),
         0.0,
         false);
-    
+
     physicsEngine.addObject(FloorBody);
 
     GameObject FloorGameObject(newObjectGroup(), FloorBody);
@@ -296,17 +281,16 @@ void Game::mainloop()
         PhysicsMaterial(0.0f, 0.0f, 0.0f, 0.0f),
         1.0,
         true);
-    
+
     physicsEngine.addObject(playerBody);
 
-    playerControler = 
+    playerControler =
         std::make_shared<FPSController>(window, playerBody, &camera, &inputs);
     FPSVariables::thingsYouCanStandOn.push_back(FloorBody);
 
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);
     glLineWidth(3.0);
-
 
     /* Setting up the UI */
     FastUI_context ui(fuiBatch, FUIfont, scene2D, defaultFontMaterial);
@@ -325,7 +309,7 @@ void Game::mainloop()
     fuiBatch->batch();
 
     state = AppState::run;
-    std::thread physicsThreads(Game::physicsLoop, this);
+    std::thread physicsThreads(&Game::physicsLoop, this);
 
     /* Music ! */
     // AudioFile music1;
@@ -337,15 +321,15 @@ void Game::mainloop()
     //     .play();
 
     /* Main Loop */
-    while(state != AppState::quit)
+    while (state != AppState::quit)
     {
         mainloopStartRoutine();
 
-        for(GLFWKeyInfo input; inputs.pull(input); userInput(input));
+        for (GLFWKeyInfo input; inputs.pull(input); userInput(input))
+            ;
 
-        
         float delta = min(globals.simulationTime.getDelta(), 0.05f);
-        if(globals.windowHasFocus() && delta > 0.00001f)
+        if (globals.windowHasFocus() && delta > 0.00001f)
         {
             // physicsEngine.update(delta);
             playerControler->update(delta);
@@ -358,7 +342,7 @@ void Game::mainloop()
         mainloopPreRenderRoutine();
 
         /* UI & 2D Render */
-        glEnable(GL_BLEND); 
+        glEnable(GL_BLEND);
         glEnable(GL_FRAMEBUFFER_SRGB);
 
         scene2D.updateAllObjects();
@@ -388,7 +372,7 @@ void Game::mainloop()
         /* 3D Render */
         skybox->bindMap(0, 4);
         scene.genLightBuffer();
-        scene.draw();   
+        scene.draw();
         renderBuffer.deactivate();
 
         /* Post Processing */

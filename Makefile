@@ -24,7 +24,7 @@ vulpine :
 	$(MAKE) -C ./Engine reinstall
 
 debug :
-	cd build && gdb $(G_EXEC)
+	cd build && gdb ./$(G_EXEC)
 
 run : 
-	cd build && $(G_EXEC)
+	cd build && ./$(G_EXEC)
