@@ -70,7 +70,7 @@ void Game::init(int paramSample)
 
     skyboxMaterial = MeshMaterial(
         new ShaderProgram(
-            "shader/foward/skybox.frag",
+            "shader/foward/Skybox.frag",
             "shader/foward/basic.vert",
             "",
             globals.standartShaderUniform3D()));
