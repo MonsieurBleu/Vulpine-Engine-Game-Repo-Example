@@ -335,9 +335,9 @@ void Game::mainloop()
     scene.add(lanterne);
 
     ModelRef werewolf = newModel(PBRstencil);
-        werewolf->loadFromFolder("ressources/models/werewolf/",false,false);
+        werewolf->loadFromFolder("ressources/models/werewolf/");
         werewolf->state
-            .scaleScalar(100)
+            .scaleScalar(80)
             .setPosition(vec3(10, 0, 0));
         scene.add(werewolf);
 

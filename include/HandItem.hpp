@@ -11,7 +11,7 @@ class HandItem : public ObjectGroup
 
 void HandItem::update(bool forceUpdate){
 
-    playerBody.
+    //playerBody.
 
     ObjectGroup::update();
 }
