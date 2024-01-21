@@ -27,4 +27,8 @@ debug :
 	cd build && gdb ./$(G_EXEC)
 
 run : 
-	cd build && ./$(G_EXEC)
+ifeq ($(OS),Windows_NT)
+	cd build && $(G_EXEC)
+else
+	cd build && .\$(G_EXEC)
+endif
