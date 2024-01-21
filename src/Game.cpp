@@ -179,6 +179,7 @@ void Game::mainloop()
     /* Loading Models and setting up the scene */
     ModelRef skybox = newModel(skyboxMaterial);
     skybox->loadFromFolder("ressources/models/skybox/", true, false);
+
     // skybox->invertFaces = true;
     skybox->depthWrite = true;
     skybox->state.frustumCulled = false;
@@ -225,6 +226,7 @@ void Game::mainloop()
             scene.add(tree);
         }
 
+    /* Instanced Mesh example */
     // InstancedModelRef trunk = newInstancedModel();
     // trunk->setMaterial(PBRinstanced);
     // trunk->loadFromFolder("ressources/models/fantasy tree/trunk/");
@@ -245,7 +247,9 @@ void Game::mainloop()
         DirectionLight()
             .setColor(vec3(143, 107, 71) / vec3(255))
             .setDirection(normalize(vec3(-0.454528, -0.707103, 0.541673)))
-            .setIntensity(5.0));
+            .setIntensity(5.0)
+            );
+
     sun->cameraResolution = vec2(2048);
     sun->shadowCameraSize = vec2(90, 90);
     sun->activateShadows();
@@ -296,7 +300,7 @@ void Game::mainloop()
     FastUI_context ui(fuiBatch, FUIfont, scene2D, defaultFontMaterial);
     FastUI_valueMenu menu(ui, {});
 
-    menu->state.setPosition(vec3(-0.9, 0.5, 0)).scaleScalar(0.8);
+    menu->state.setPosition(vec3(-0.9, 0.5, 0)).scaleScalar(0.8); 
     globals.appTime.setMenuConst(menu);
     globals.cpuTime.setMenu(menu);
     globals.gpuTime.setMenu(menu);
@@ -318,7 +322,18 @@ void Game::mainloop()
     // AudioSource musicSource;
     // musicSource
     //     .setBuffer(music1.getHandle())
+    //     .setPitch(0)
     //     .play();
+
+
+
+    ModelRef lanterne = newModel(PBR);
+    lanterne->loadFromFolder("ressources/models/lantern/");
+    lanterne->state
+        .scaleScalar(0.01)
+        .setPosition(vec3(2, 2, 0));
+    scene.add(lanterne);
+
 
     /* Main Loop */
     while (state != AppState::quit)
@@ -335,6 +350,9 @@ void Game::mainloop()
             playerControler->update(delta);
             FloorGameObject.update(delta);
         }
+
+        // float c = 0.5 + 0.5*cos(globals.appTime.getElapsedTime());
+        // musicSource.setPitch(0.1 + c*2);
 
         menu.trackCursor();
         menu.updateText();
@@ -386,8 +404,6 @@ void Game::mainloop()
         sun->shadowMap.bindTexture(0, 6);
         screenBuffer2D.bindTexture(0, 7);
         globals.drawFullscreenQuad();
-
-        // sun->shadowCamera.setPosition(globals.currentCamera->getPosition());
 
         /* Main loop End */
         mainloopEndRoutine();
