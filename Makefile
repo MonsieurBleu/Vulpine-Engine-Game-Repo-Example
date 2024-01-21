@@ -17,8 +17,8 @@ clean :
 	$(MAKE) -C .\Engine gameClean
 
 cleanall : 
-	$(MAKE) -C ./Engine gameClean
-	$(MAKE) -C ./Engine clean
+	$(MAKE) -C .\Engine gameClean
+	$(MAKE) -C .\Engine clean
 
 vulpine :
 	$(MAKE) -C .\Engine reinstall
