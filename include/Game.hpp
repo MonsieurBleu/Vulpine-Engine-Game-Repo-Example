@@ -4,13 +4,13 @@
 #include <Fonts.hpp>
 #include <FastUI.hpp>
 
+#include <GameGlobals.hpp>
+#include <HandItem.hpp>
+
 class Game final : public App
 {
 private:
     /* 3D Materials */
-    MeshMaterial PBR;
-    MeshMaterial PBRstencil;
-    MeshMaterial PBRinstanced;
     MeshMaterial skyboxMaterial;
     MeshMaterial depthOnlyMaterial;
     MeshMaterial depthOnlyStencilMaterial;
@@ -27,6 +27,9 @@ private:
     PhysicsEngine physicsEngine;
     LimitTimer physicsTicks;
     void physicsLoop();
+
+    /* Hand Item */
+    HandItemHandlerRef handItems;
 
 public:
     Game(GLFWwindow *window);

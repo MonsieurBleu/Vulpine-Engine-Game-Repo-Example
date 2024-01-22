@@ -47,21 +47,21 @@ void Game::init(int paramSample)
             "shader/foward/basicInstance.vert",
             ""));
 
-    PBR = MeshMaterial(
+    GameGlobals::PBR = MeshMaterial(
         new ShaderProgram(
             "shader/foward/PBR.frag",
             "shader/foward/basic.vert",
             "",
             globals.standartShaderUniform3D()));
 
-    PBRstencil = MeshMaterial(
+    GameGlobals::PBRstencil = MeshMaterial(
         new ShaderProgram(
             "shader/foward/PBR.frag",
             "shader/foward/basic.vert",
             "",
             globals.standartShaderUniform3D()));
 
-    PBRinstanced = MeshMaterial(
+    GameGlobals::PBRinstanced = MeshMaterial(
         new ShaderProgram(
             "shader/foward/PBR.frag",
             "shader/foward/basicInstance.vert",
@@ -75,8 +75,8 @@ void Game::init(int paramSample)
             "",
             globals.standartShaderUniform3D()));
 
-    PBRstencil.depthOnly = depthOnlyStencilMaterial;
-    PBRinstanced.depthOnly = depthOnlyInstancedMaterial;
+    GameGlobals::PBRstencil.depthOnly = depthOnlyStencilMaterial;
+    GameGlobals::PBRinstanced.depthOnly = depthOnlyInstancedMaterial;
     scene.depthOnlyMaterial = depthOnlyMaterial;
 
     /* UI */
@@ -106,6 +106,8 @@ void Game::init(int paramSample)
     globals.fpsLimiter.activate();
     globals.fpsLimiter.freq = 144.f;
     glfwSwapInterval(0);
+
+    handItems = std::make_shared<HandItemHandler>();
 }
 
 bool Game::userInput(GLFWKeyInfo input)
@@ -114,6 +116,8 @@ bool Game::userInput(GLFWKeyInfo input)
         return true;
 
     playerControler->doInputs(input);
+
+    handItems->inputs(input);
 
     if (input.action == GLFW_PRESS)
     {
@@ -144,8 +148,8 @@ bool Game::userInput(GLFWKeyInfo input)
             Bloom.getShader().reset();
             SSAO.getShader().reset();
             depthOnlyMaterial->reset();
-            PBR->reset();
-            PBRstencil->reset();
+            GameGlobals::PBR->reset();
+            GameGlobals::PBRstencil->reset();
             skyboxMaterial->reset();
             break;
 
@@ -186,7 +190,7 @@ void Game::mainloop()
     skybox->state.scaleScalar(1E6);
     scene.add(skybox);
 
-    ModelRef floor = newModel(PBR);
+    ModelRef floor = newModel(GameGlobals::PBR);
     floor->loadFromFolder("ressources/models/ground/");
 
     int gridSize = 10;
@@ -204,11 +208,11 @@ void Game::mainloop()
     int forestSize = 8;
     float treeScale = 0.5;
 
-    ModelRef leaves = newModel(PBRstencil);
+    ModelRef leaves = newModel(GameGlobals::PBRstencil);
     leaves->loadFromFolder("ressources/models/fantasy tree/");
     leaves->noBackFaceCulling = true;
 
-    ModelRef trunk = newModel(PBR);
+    ModelRef trunk = newModel(GameGlobals::PBR);
     trunk->loadFromFolder("ressources/models/fantasy tree/trunk/");
 
     for (int i = -forestSize; i < forestSize; i++)
@@ -316,38 +320,42 @@ void Game::mainloop()
     std::thread physicsThreads(&Game::physicsLoop, this);
 
     /* Music ! */
-    // AudioFile music1;
-    // music1.loadOGG("ressources/musics/Endless Space by GeorgeTantchev.ogg");
+    AudioFile music1;
+    music1.loadOGG("ressources/musics/Endless Space by GeorgeTantchev.ogg");
 
-    // AudioSource musicSource;
-    // musicSource
-    //     .setBuffer(music1.getHandle())
-    //     .setPitch(0)
-    //     .play();
+    AudioSource musicSource;
+    musicSource
+        .setBuffer(music1.getHandle())
+        .setPosition(vec3(0, 0, 3))
+        .play();
+
+    // alSourcei(musicSource.getHandle(), AL_SOURCE_RELATIVE, AL_TRUE);
+    alSource3f(musicSource.getHandle(), AL_DIRECTION, 0.0, 0.0, 0.0);
 
 
-
-    ModelRef lanterne = newModel(PBR);
+    ModelRef lanterne = newModel(GameGlobals::PBR);
     lanterne->loadFromFolder("ressources/models/lantern/");
     lanterne->state
         .scaleScalar(0.01)
         .setPosition(vec3(2, 2, 0));
     scene.add(lanterne);
 
-    ModelRef werewolf = newModel(PBRstencil);
+    ModelRef werewolf = newModel(GameGlobals::PBRstencil);
         werewolf->loadFromFolder("ressources/models/werewolf/",false,false);
         werewolf->state
             .scaleScalar(100)
             .setPosition(vec3(10, 0, 0));
         scene.add(werewolf);
+    
+    handItems->addItem(HandItemRef(new HandItem(HandItemType::lantern)));
+    scene.add(handItems);
 
     /* Main Loop */
     while (state != AppState::quit)
     {
         mainloopStartRoutine();
 
-        for (GLFWKeyInfo input; inputs.pull(input); userInput(input))
-            ;
+        for (GLFWKeyInfo input; inputs.pull(input); userInput(input));
 
         float delta = min(globals.simulationTime.getDelta(), 0.05f);
         if (globals.windowHasFocus() && delta > 0.00001f)

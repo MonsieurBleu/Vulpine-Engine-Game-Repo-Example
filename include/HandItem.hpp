@@ -1,17 +1,39 @@
 #pragma once
 #include <../Engine/include/ObjectGroup.hpp>
+#include <../Engine/include/Inputs.hpp>
+#include <vector>
 
+enum HandItemType
+{
+    empty,
+    lantern
+};
 
 class HandItem : public ObjectGroup
 {
+    private :
+        HandItemType type;
 
     public :
-        virtual void update(bool forceUpdate = false);
+        HandItem(HandItemType type);
+        HandItemType getType(){return type;};
 };
 
-void HandItem::update(bool forceUpdate){
+typedef std::shared_ptr<HandItem> HandItemRef;
 
-    playerBody.
+class HandItemHandler : public ObjectGroup
+{
+    private : 
+        int currentItem = 0;
+        std::vector<HandItemRef> items;
 
-    ObjectGroup::update();
-}
+    public :
+        HandItemHandler();
+        bool inputs(GLFWKeyInfo input);
+        virtual void update(bool forceUpdate = false);
+
+        void addItem(HandItemRef newItem);
+};
+
+
+typedef std::shared_ptr<HandItemHandler> HandItemHandlerRef;
