@@ -17,8 +17,8 @@ clean :
 	$(MAKE) -C ./Engine gameClean
 
 cleanall : 
-	$(MAKE) -C .\Engine gameClean
-	$(MAKE) -C .\Engine clean
+	$(MAKE) -C ./Engine gameClean
+	$(MAKE) -C ./Engine clean
 
 vulpine :
 	$(MAKE) -C ./Engine reinstall
@@ -30,5 +30,5 @@ run :
 ifeq ($(OS),Windows_NT)
 	cd build && $(G_EXEC)
 else
-	cd build && .\$(G_EXEC)
+	cd build && ./$(G_EXEC)
 endif
