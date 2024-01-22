@@ -30,5 +30,5 @@ run :
 ifeq ($(OS),Windows_NT)
 	cd build && $(G_EXEC)
 else
-	cd build && .\$(G_EXEC)
+	cd build && ./$(G_EXEC)
 endif

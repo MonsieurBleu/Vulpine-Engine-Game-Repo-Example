@@ -246,9 +246,8 @@ void Game::mainloop()
     SceneDirectionalLight sun = newDirectionLight(
         DirectionLight()
             .setColor(vec3(143, 107, 71) / vec3(255))
-            .setDirection(normalize(vec3(-0.454528, -0.707103, 0.541673)))
-            .setIntensity(5.0)
-            );
+            .setDirection(normalize(vec3(-1.0, -1.0, 0.0)))
+            .setIntensity(5.0));
 
     sun->cameraResolution = vec2(2048);
     sun->shadowCameraSize = vec2(90, 90);
@@ -300,7 +299,7 @@ void Game::mainloop()
     FastUI_context ui(fuiBatch, FUIfont, scene2D, defaultFontMaterial);
     FastUI_valueMenu menu(ui, {});
 
-    menu->state.setPosition(vec3(-0.9, 0.5, 0)).scaleScalar(0.8); 
+    menu->state.setPosition(vec3(-0.9, 0.5, 0)).scaleScalar(0.8);
     globals.appTime.setMenuConst(menu);
     globals.cpuTime.setMenu(menu);
     globals.gpuTime.setMenu(menu);
@@ -325,8 +324,6 @@ void Game::mainloop()
     //     .setPitch(0)
     //     .play();
 
-
-
     ModelRef lanterne = newModel(PBR);
     lanterne->loadFromFolder("ressources/models/lantern/");
     lanterne->state
@@ -335,11 +332,11 @@ void Game::mainloop()
     scene.add(lanterne);
 
     ModelRef werewolf = newModel(PBRstencil);
-        werewolf->loadFromFolder("ressources/models/werewolf/");
-        werewolf->state
-            .scaleScalar(80)
-            .setPosition(vec3(10, 0, 0));
-        scene.add(werewolf);
+    werewolf->loadFromFolder("ressources/models/werewolf/");
+    werewolf->state
+        .scaleScalar(80)
+        .setPosition(vec3(10, 0, 0));
+    scene.add(werewolf);
 
     /* Main Loop */
     while (state != AppState::quit)

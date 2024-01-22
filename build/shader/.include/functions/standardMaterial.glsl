@@ -1,7 +1,7 @@
-#include functions/HSV.glsl
+#include functions / HSV.glsl
 
-#include globals/Constants.glsl
-#include functions/Noise.glsl
+#include globals / Constants.glsl
+#include functions / Noise.glsl
 
 float mRoughness;
 float mRoughness2;
@@ -24,9 +24,9 @@ Material getBRDF(vec3 lightDirection, vec3 lightColor)
 {
     vec3 F0 = mix(vec3(0.04), color, mMetallic);
 
-    vec3 halfwayDir = normalize(-lightDirection+viewDir);
+    vec3 halfwayDir = normalize(-lightDirection + viewDir);
     float nDotH = max(dot(normalComposed, halfwayDir), 0.0);
-    float nDotH2 = nDotH*nDotH;
+    float nDotH2 = nDotH * nDotH;
     float nDotL = max(dot(normalComposed, -lightDirection), 0.0);
 
     vec3 fresnelSchlick = F0 + (1.0 - F0) * pow(1.0 - nDotH, 5.0);
@@ -34,21 +34,20 @@ Material getBRDF(vec3 lightDirection, vec3 lightColor)
     float nDenom = (nDotH2 * (mRoughness2 - 1.0) + 1.0);
     float normalDistrib = mRoughness2 / (PI * nDenom * nDenom);
 
-    float gK = mRoughness2*0.5;
+    float gK = mRoughness2 * 0.5;
     float gKi = 1.0 - gK;
-    float geometry = (nDotL*nDotV)/((nDotV*gKi + gK)*(nDotL*gKi + gK));
+    float geometry = (nDotL * nDotV) / ((nDotV * gKi + gK) * (nDotL * gKi + gK));
 
-    vec3 specular = fresnelSchlick*normalDistrib*geometry/max((4.f*nDotV*nDotL), 0.00000000001);
+    vec3 specular = fresnelSchlick * normalDistrib * geometry / max((4.0 * nDotV * nDotL), 0.00000001);
 
-    vec3 kD = (vec3(1.0) - fresnelSchlick)*(1.0 - mMetallic);
-    vec3 diffuse = kD*color/PI;
+    vec3 kD = (vec3(1.0) - fresnelSchlick) * (1.0 - mMetallic);
+    vec3 diffuse = kD * color / PI;
 
     Material result;
     result.result = (specular + diffuse) * lightColor * nDotL * 2.0;
 
     return result;
 }
-
 
 /*
     Efficient soft-shadow with percentage-closer filtering
@@ -60,61 +59,61 @@ float getShadow(sampler2D shadowmap, mat4 rMatrix)
 {
     vec4 mapPosition = rMatrix * vec4(position, 1.0);
     mapPosition.xyz /= mapPosition.w;
-    mapPosition.xy = mapPosition.xy*0.5 + 0.5;    
+    mapPosition.xy = mapPosition.xy * 0.5 + 0.5;
 
-    if(mapPosition.x < 0.f || mapPosition.x > 1.f || 
-       mapPosition.y < 0.f || mapPosition.y > 1.f)
-       return 1.f;
+    if (mapPosition.x < 0. || mapPosition.x > 1. ||
+        mapPosition.y < 0. || mapPosition.y > 1.)
+        return 1.;
 
-    float res = 0.f;
-    float bias = 0.00005; //0.00002
+    float res = 0.;
+    float bias = 0.00005; // 0.00002
     float radius = 0.001; // 0.0015
 
-    #ifdef EFFICIENT_SMOOTH_SHADOW
-        int it = 8;
-        int itPenumbra = 64;
-        int i = 0;
+#ifdef EFFICIENT_SMOOTH_SHADOW
+    int it = 8;
+    int itPenumbra = 64;
+    int i = 0;
 
-        for(; i < it; i++)
+    for (; i < it; i++)
+    {
+        vec2 rand = vec2(gold_noise3(position, i), gold_noise3(position, -i));
+        // vec2 rand = 0.5 - random2(position+i);
+        vec2 samplePos = mapPosition.xy + 2.0 * radius * rand;
+        float d = texture(shadowmap, samplePos).r;
+        res += d - bias < mapPosition.z ? 1.0 : 0.0;
+    }
+
+    float p = float(it) * 0.5;
+    float prct = abs(res - p) / p;
+    // itPenumbra = int(float(itPenumbra)*prct);
+
+    // if(res < float(it)-0.01 && res > 0.001)
+    if (prct < 1.)
+    {
+        // float p = float(it)*0.5;
+        // float prct = 0.5 + 0.5*abs(res-p)/p;
+        // itPenumbra = int(float(itPenumbra)*prct);
+
+        for (; i < itPenumbra; i++)
         {
             vec2 rand = vec2(gold_noise3(position, i), gold_noise3(position, -i));
             // vec2 rand = 0.5 - random2(position+i);
-            vec2 samplePos = mapPosition.xy + 2.0*radius*rand;
+            vec2 samplePos = mapPosition.xy + radius * rand;
             float d = texture(shadowmap, samplePos).r;
             res += d - bias < mapPosition.z ? 1.0 : 0.0;
         }
 
-        float p = float(it)*0.5;
-        float prct = abs(res-p)/p;
-        // itPenumbra = int(float(itPenumbra)*prct);
+        // res = 0.f;
+    }
+    // else
+    //     res = 1.f;
 
-        // if(res < float(it)-0.01 && res > 0.001)
-        if(prct < 1.f)
-        {
-            // float p = float(it)*0.5;
-            // float prct = 0.5 + 0.5*abs(res-p)/p;
-            // itPenumbra = int(float(itPenumbra)*prct);
+    // res = prct;
 
-            for(; i < itPenumbra; i++)
-            {
-                vec2 rand = vec2(gold_noise3(position, i), gold_noise3(position, -i));
-                // vec2 rand = 0.5 - random2(position+i);
-                vec2 samplePos = mapPosition.xy + radius*rand;
-                float d = texture(shadowmap, samplePos).r;
-                res += d - bias < mapPosition.z ? 1.0 : 0.0;
-            }
-
-            // res = 0.f;
-        }
-        // else
-        //     res = 1.f;
-
-        // res = prct;
-
-        res /= float(i+1);
-    #else
-        res = texture(shadowmap, mapPosition.xy).r - bias < mapPosition.z ? 1.0 : 0.0;
-    #endif
+    res /= float(i + 1);
+#else
+    res = texture(shadowmap, mapPosition.xy).r - bias < mapPosition.z ? 1.0 : 0.0;
+#endif
 
     return res;
 }
@@ -126,73 +125,72 @@ Material getMultiLightPBR()
 
     nDotV = max(dot(normalComposed, viewDir), 0.0);
     result.fresnel = 1.0 - nDotV;
-    
-    while(true)
+    result.result = vec3(0);
+
+    while (true)
     {
         Light light = lights[id];
-        Material lightResult = {vec3(0.f), 0.f};
+        Material lightResult = {
+            vec3(0.), 0.};
         float factor = 1.0;
-        switch(light.stencil.a)
+        switch (light.stencil.a)
         {
-            case 0 :
-                return result;
-                break;
+        case 0:
+            return result;
+            break;
 
-            case 1 :
+        case 1:
+            lightResult = getBRDF(light.direction.xyz, light.color.rgb);
+            factor = light.color.a;
+            factor *= (light.stencil.b % 2) == 0 ? 1. : getShadow(bShadowMaps[light.stencil.r], light._rShadowMatrix);
+            break;
 
-                lightResult = getBRDF(light.direction.xyz, light.color.rgb);
-                factor = light.color.a;
-                factor *= 
-                    light.stencil.b%2 == 0 ? 
-                        1.f : 
-                        getShadow(bShadowMaps[light.stencil.r], light._rShadowMatrix);
-                break;
+        case 2:
+        {
+            float maxDist = max(light.direction.x, 0.0001);
+            float distFactor = max(maxDist - distance(position, light.position.xyz), 0.) / maxDist;
+            vec3 direction = normalize(position - light.position.xyz);
 
-            case 2 : 
-            {
-                float maxDist = max(light.direction.x, 0.0001);
-                float distFactor = max(maxDist - distance(position, light.position.xyz), 0.f)/maxDist;
-                vec3 direction = normalize(position - light.position.xyz);
-                
-                lightResult = getBRDF(direction, light.color.rgb);
-                factor = distFactor*distFactor*light.color.a;
-            }
-                break;
-
-            case 3 : 
-            {
-                vec3 pos1 = light.position.xyz;
-                vec3 pos2 = light.direction.xyz;
-                vec3 H = position-pos1;
-                vec3 tubeDir = normalize(pos1-pos2);
-                float cosinus = dot(normalize(H), tubeDir);
-                float A = cosinus * length(H);
-                vec3 sPos = pos1+tubeDir*A;
-
-                float segL = length(pos1-pos2);
-                sPos = mix(sPos, pos1, step(segL, length(sPos-pos2)));
-                sPos = mix(sPos, pos2, step(segL, length(sPos-pos1)));
-
-                float radius = 5.0;
-
-                /*
-                    TODO : fix radius
-                */
-                float maxDist = max(light.direction.a, 0.0001);
-                float distFactor = max(maxDist - distance(sPos, position), 0.f)/maxDist;
-                vec3 direction = normalize(position - sPos);
-                
-                lightResult = getBRDF(direction, light.color.rgb);
-                factor = distFactor*distFactor*light.color.a;
-            }
-                break;
-
-            default : break;
+            lightResult = getBRDF(direction, light.color.rgb);
+            factor = distFactor * distFactor * light.color.a;
         }
-        
+        break;
+
+        case 3:
+        {
+            vec3 pos1 = light.position.xyz;
+            vec3 pos2 = light.direction.xyz;
+            vec3 H = position - pos1;
+            vec3 tubeDir = normalize(pos1 - pos2);
+            float cosinus = dot(normalize(H), tubeDir);
+            float A = cosinus * length(H);
+            vec3 sPos = pos1 + tubeDir * A;
+
+            float segL = length(pos1 - pos2);
+            sPos = mix(sPos, pos1, step(segL, length(sPos - pos2)));
+            sPos = mix(sPos, pos2, step(segL, length(sPos - pos1)));
+
+            float radius = 5.0;
+
+            /*
+                TODO : fix radius
+            */
+            float maxDist = max(light.direction.a, 0.0001);
+            float distFactor = max(maxDist - distance(sPos, position), 0.) / maxDist;
+            vec3 direction = normalize(position - sPos);
+
+            lightResult = getBRDF(direction, light.color.rgb);
+            factor = distFactor * distFactor * light.color.a;
+        }
+        break;
+
+        default:
+            break;
+        }
+
         result.result += lightResult.result * factor;
 
-        id ++;
+        id++;
     }
 
     return result;
@@ -204,7 +202,7 @@ vec3 getStandardEmmisive(vec3 fcolor)
     // vec3 finalEmmisive = mix(baseEmmissive, 2.0*fcolor, mEmmisive);
 
     vec3 baseEmmissive = fcolor;
-    vec3 finalEmmisive = baseEmmissive * (1.0 + 2.0*mEmmisive);
+    vec3 finalEmmisive = baseEmmissive * (1.0 + 2.0 * mEmmisive);
 
     return finalEmmisive;
 }
