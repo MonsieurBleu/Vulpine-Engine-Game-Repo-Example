@@ -8,23 +8,23 @@ endif
 default : install
 
 install :
-	$(MAKE) -C ./Engine game
+	@$(MAKE) -C ./Engine game --no-print-directory
 
 reinstall : 
-	$(MAKE) -C ./Engine gameReinstall
+	@$(MAKE) -C ./Engine gameReinstall --no-print-directory
 
 clean : 
-	$(MAKE) -C ./Engine gameClean
+	@$(MAKE) -C ./Engine gameClean --no-print-directory
 
 cleanall : 
-	$(MAKE) -C ./Engine gameClean
-	$(MAKE) -C ./Engine clean
+	@$(MAKE) -C ./Engine gameClean --no-print-directory
+	@$(MAKE) -C ./Engine clean --no-print-directory
 
 vulpine :
-	$(MAKE) -C ./Engine reinstall
+	@$(MAKE) -C ./Engine reinstall --no-print-directory
 
 debug :
-	cd build && gdb ./$(G_EXEC)
+	@cd build && gdb ./$(G_EXEC)
 
 run : 
 ifeq ($(OS),Windows_NT)
