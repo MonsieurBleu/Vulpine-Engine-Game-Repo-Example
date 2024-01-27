@@ -5,23 +5,28 @@ else
 	G_EXEC = Game
 endif
 
+MAKE_FLAGS = --no-print-directory
+MAKE_PARALLEL = -j 6
+
 default : install
 
-install :
-	@$(MAKE) -C ./Engine game --no-print-directory
+install : 
+	@$(MAKE) -C ./Engine game $(MAKE_FLAGS) $(MAKE_PARALLEL)
 
 reinstall : 
-	@$(MAKE) -C ./Engine gameReinstall --no-print-directory
+	@$(MAKE) -C ./Engine gameClean $(MAKE_FLAGS)
+	@$(MAKE) -C ./Engine game $(MAKE_FLAGS) $(MAKE_PARALLEL)
 
 clean : 
-	@$(MAKE) -C ./Engine gameClean --no-print-directory
+	@$(MAKE) -C ./Engine gameClean $(MAKE_FLAGS)
 
 cleanall : 
-	@$(MAKE) -C ./Engine gameClean --no-print-directory
-	@$(MAKE) -C ./Engine clean --no-print-directory
+	@$(MAKE) -C ./Engine gameClean $(MAKE_FLAGS)
+	@$(MAKE) -C ./Engine clean $(MAKE_FLAGS)
 
 vulpine :
-	@$(MAKE) -C ./Engine reinstall --no-print-directory
+	@$(MAKE) -C ./Engine clean $(MAKE_FLAGS)
+	@$(MAKE) -C ./Engine install $(MAKE_FLAGS) $(MAKE_PARALLEL)
 
 debug :
 	@cd build && gdb ./$(G_EXEC)
