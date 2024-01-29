@@ -5,8 +5,6 @@
 #include <FastUI.hpp>
 
 #include <GameGlobals.hpp>
-#include <HandItem.hpp>
-
 class Game final : public App
 {
 private:
@@ -23,13 +21,12 @@ private:
     SimpleUiTileBatchRef fuiBatch;
 
     /* Physics */
-    std::shared_ptr<FPSController> playerControler;
+    // std::shared_ptr<FPSController> playerControler;
     PhysicsEngine physicsEngine;
     LimitTimer physicsTicks;
     void physicsLoop();
 
-    /* Hand Item */
-    HandItemHandlerRef handItems;
+    SpectatorController spectator;
 
 public:
     Game(GLFWwindow *window);

@@ -6,12 +6,17 @@
 #include <Audio.hpp>
 
 #include <thread>
+#include <fstream>
 
 Game::Game(GLFWwindow *window) : App(window) {}
 
 void Game::init(int paramSample)
 {
     setIcon("ressources/icon.png");
+
+    setController(&spectator);
+
+    scene.useBindlessTextures = true;
 
     ambientLight = vec3(0.1);
 
@@ -24,9 +29,18 @@ void Game::init(int paramSample)
     finalProcessingStage.addUniform(ShaderUniform(Bloom.getIsEnableAddr(), 10));
 
     camera.init(radians(70.0f), globals.windowWidth(), globals.windowHeight(), 0.1f, 1E4f);
-    camera.setMouseFollow(false);
-    camera.setPosition(vec3(0, 1, 0));
-    camera.setDirection(vec3(1, 0, 0));
+    // camera.setMouseFollow(false);
+    // camera.setPosition(vec3(0, 1, 0));
+    // camera.setDirection(vec3(1, 0, 0));
+    auto myfile = std::fstream("saves/cameraState.bin", std::ios::in | std::ios::binary);
+    if(myfile)
+    {
+        CameraState buff;
+        myfile.read((char*)&buff, sizeof(CameraState));
+        myfile.close();
+        camera.setState(buff);
+    }
+
 
     /* Loading 3D Materials */
     depthOnlyMaterial = MeshMaterial(
@@ -106,18 +120,12 @@ void Game::init(int paramSample)
     globals.fpsLimiter.activate();
     globals.fpsLimiter.freq = 144.f;
     glfwSwapInterval(0);
-
-    handItems = std::make_shared<HandItemHandler>();
 }
 
 bool Game::userInput(GLFWKeyInfo input)
 {
     if (baseInput(input))
         return true;
-
-    playerControler->doInputs(input);
-
-    handItems->inputs(input);
 
     if (input.action == GLFW_PRESS)
     {
@@ -134,16 +142,20 @@ bool Game::userInput(GLFWKeyInfo input)
         case GLFW_KEY_1:
             Bloom.toggle();
             break;
+
         case GLFW_KEY_2:
             SSAO.toggle();
             break;
+        
+
 
         case GLFW_KEY_F5:
-#ifdef _WIN32
+            #ifdef _WIN32
             system("cls");
-#else
+            #else
             system("clear");
-#endif
+            #endif
+
             finalProcessingStage.reset();
             Bloom.getShader().reset();
             SSAO.getShader().reset();
@@ -152,6 +164,14 @@ bool Game::userInput(GLFWKeyInfo input)
             GameGlobals::PBRstencil->reset();
             skyboxMaterial->reset();
             break;
+
+        case GLFW_KEY_F8:
+            {
+                auto myfile = std::fstream("saves/cameraState.bin", std::ios::out | std::ios::binary);
+                myfile.write((char*)&camera.getState(), sizeof(CameraState));
+                myfile.close();
+            }
+                break;
 
         default:
             break;
@@ -205,7 +225,7 @@ void Game::mainloop()
             scene.add(f);
         }
 
-    int forestSize = 8;
+    int forestSize = 32;
     float treeScale = 0.5;
 
     ModelRef leaves = newModel(GameGlobals::PBRstencil);
@@ -258,43 +278,6 @@ void Game::mainloop()
     sun->activateShadows();
     scene.add(sun);
 
-    /* FPS demo initialization */
-    RigidBody::gravity = vec3(0.0, -80, 0.0);
-
-    AABBCollider aabbCollider = AABBCollider(vec3(-32 * 5, -.1, -32 * 5), vec3(32 * 5, .1, 32 * 5));
-
-    RigidBodyRef FloorBody = newRigidBody(
-        vec3(0.0, 0.0, 0.0),
-        vec3(0.0, 0.0, 0.0),
-        quat(0.0, 0.0, 0.0, 1.0),
-        vec3(0.0, 0.0, 0.0),
-        &aabbCollider,
-        PhysicsMaterial(),
-        0.0,
-        false);
-
-    physicsEngine.addObject(FloorBody);
-
-    GameObject FloorGameObject(newObjectGroup(), FloorBody);
-    FloorGameObject.getGroup()->add(floor);
-
-    SphereCollider playerCollider = SphereCollider(2.0);
-    RigidBodyRef playerBody = newRigidBody(
-        vec3(0.0, 8.0, 0.0),
-        vec3(0.0, 0.0, 0.0),
-        quat(0.0, 0.0, 0.0, 1.0),
-        vec3(0.0, 0.0, 0.0),
-        &playerCollider,
-        PhysicsMaterial(0.0f, 0.0f, 0.0f, 0.0f),
-        1.0,
-        true);
-
-    physicsEngine.addObject(playerBody);
-
-    playerControler =
-        std::make_shared<FPSController>(window, playerBody, &camera, &inputs);
-    FPSVariables::thingsYouCanStandOn.push_back(FloorBody);
-
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_DEPTH_TEST);
     glLineWidth(3.0);
@@ -308,8 +291,11 @@ void Game::mainloop()
     globals.cpuTime.setMenu(menu);
     globals.gpuTime.setMenu(menu);
     globals.fpsLimiter.setMenu(menu);
-    physicsTicks.setMenu(menu);
-    sun->setMenu(menu, U"Sun");
+    // physicsTicks.setMenu(menu);
+    // sun->setMenu(menu, U"Sun");
+
+    BenchTimer cullTimer("Frustum Culling");
+    cullTimer.setMenu(menu);
 
     menu.batch();
     scene2D.updateAllObjects();
@@ -318,19 +304,20 @@ void Game::mainloop()
     state = AppState::run;
     std::thread physicsThreads(&Game::physicsLoop, this);
 
-    /* Music ! */
+    /* Music ! 
     AudioFile music1;
     music1.loadOGG("ressources/musics/Endless Space by GeorgeTantchev.ogg");
 
     AudioSource musicSource;
     musicSource
+        .generate()
         .setBuffer(music1.getHandle())
         .setPosition(vec3(0, 0, 3))
         .play();
 
     // alSourcei(musicSource.getHandle(), AL_SOURCE_RELATIVE, AL_TRUE);
     alSource3f(musicSource.getHandle(), AL_DIRECTION, 0.0, 0.0, 0.0);
-
+    */
 
     ModelRef lanterne = newModel(GameGlobals::PBR);
     lanterne->loadFromFolder("ressources/models/lantern/");
@@ -339,33 +326,12 @@ void Game::mainloop()
         .setPosition(vec3(2, 2, 0));
     scene.add(lanterne);
 
-    ModelRef werewolf = newModel(GameGlobals::PBRstencil);
-        werewolf->loadFromFolder("ressources/models/werewolf/",false,false);
-        werewolf->state
-            .scaleScalar(100)
-            .setPosition(vec3(10, 0, 0));
-        scene.add(werewolf);
-    
-    handItems->addItem(HandItemRef(new HandItem(HandItemType::lantern)));
-    scene.add(handItems);
-
     /* Main Loop */
     while (state != AppState::quit)
     {
         mainloopStartRoutine();
 
         for (GLFWKeyInfo input; inputs.pull(input); userInput(input));
-
-        float delta = min(globals.simulationTime.getDelta(), 0.05f);
-        if (globals.windowHasFocus() && delta > 0.00001f)
-        {
-            // physicsEngine.update(delta);
-            playerControler->update(delta);
-            FloorGameObject.update(delta);
-        }
-
-        // float c = 0.5 + 0.5*cos(globals.appTime.getElapsedTime());
-        // musicSource.setPitch(0.1 + c*2);
 
         menu.trackCursor();
         menu.updateText();
@@ -394,7 +360,9 @@ void Game::mainloop()
         scene.generateShadowMaps();
         renderBuffer.activate();
 
+        cullTimer.start();
         scene.cull();
+        cullTimer.end();
 
         /* 3D Early Depth Testing */
         scene.depthOnlyDraw(*globals.currentCamera, true);
