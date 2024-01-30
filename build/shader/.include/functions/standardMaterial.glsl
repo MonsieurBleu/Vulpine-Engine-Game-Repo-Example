@@ -85,9 +85,7 @@ float getShadow(sampler2D shadowmap, mat4 rMatrix)
 
     float p = float(it) * 0.5;
     float prct = abs(res - p) / p;
-    // itPenumbra = int(float(itPenumbra)*prct);
 
-    // if(res < float(it)-0.01 && res > 0.001)
     if (prct < 1.)
     {
         // float p = float(it)*0.5;
@@ -102,15 +100,9 @@ float getShadow(sampler2D shadowmap, mat4 rMatrix)
             float d = texture(shadowmap, samplePos).r;
             res += d - bias < mapPosition.z ? 1.0 : 0.0;
         }
-
-        // res = 0.f;
     }
-    // else
-    //     res = 1.f;
 
-    // res = prct;
-
-    res /= float(i + 1);
+    res /= float(i);
 #else
     res = texture(shadowmap, mapPosition.xy).r - bias < mapPosition.z ? 1.0 : 0.0;
 #endif

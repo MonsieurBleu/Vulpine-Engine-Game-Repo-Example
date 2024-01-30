@@ -146,8 +146,6 @@ bool Game::userInput(GLFWKeyInfo input)
         case GLFW_KEY_2:
             SSAO.toggle();
             break;
-        
-
 
         case GLFW_KEY_F5:
             #ifdef _WIN32
@@ -291,6 +289,9 @@ void Game::mainloop()
     globals.cpuTime.setMenu(menu);
     globals.gpuTime.setMenu(menu);
     globals.fpsLimiter.setMenu(menu);
+
+    
+
     // physicsTicks.setMenu(menu);
     // sun->setMenu(menu, U"Sun");
 
